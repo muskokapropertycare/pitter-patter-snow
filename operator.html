@@ -5,40 +5,40 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
 <title>Pitter Patter Snow - Operator</title>
 <link rel="manifest" href="manifest.json"/>
-<meta name="theme-color" content="#1565c0"/>
+<meta name="theme-color" content="#cc0000"/>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,sans-serif;background:#0a1628;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+body{font-family:Arial,sans-serif;background:#0d0d0d;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
 #login-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:14px;}
 .app-logo{font-size:64px;line-height:1;}
-.app-title{font-size:24px;font-weight:bold;color:#90caf9;}
-.app-sub{font-size:14px;color:#78909c;margin-bottom:8px;}
+.app-title{font-size:24px;font-weight:bold;color:#fff;}
+.app-sub{font-size:14px;color:#888;margin-bottom:8px;}
 .field{width:100%;max-width:340px;}
-.field label{display:block;font-size:12px;color:#90caf9;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
-.field input{width:100%;padding:14px 16px;border-radius:12px;border:2px solid #1a3a6b;background:#0d2040;color:#fff;font-size:16px;outline:none;transition:border .2s;}
-.field input:focus{border-color:#1565c0;}
-#login-error{color:#ef5350;font-size:13px;min-height:16px;width:100%;max-width:340px;}
+.field label{display:block;font-size:12px;color:#cc0000;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.field input{width:100%;padding:14px 16px;border-radius:12px;border:2px solid #2a2a2a;background:#1a1a1a;color:#fff;font-size:16px;outline:none;transition:border .2s;}
+.field input:focus{border-color:#cc0000;}
+#login-error{color:#ff4444;font-size:13px;min-height:16px;width:100%;max-width:340px;}
 .btn{width:100%;max-width:340px;padding:15px;border-radius:12px;border:none;font-size:17px;font-weight:bold;cursor:pointer;}
-.btn-blue{background:#1565c0;color:#fff;}
+.btn-blue{background:#cc0000;color:#fff;}
 .btn-sm{padding:6px 13px;border-radius:8px;font-size:12px;width:auto;}
-.btn-green{background:#2e7d32;color:#fff;}
-.btn-gray{background:#37474f;color:#ccc;}
+.btn-green{background:#cc0000;color:#fff;}
+.btn-gray{background:#333;color:#ccc;}
 #app-screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
-#topbar{background:#1565c0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
-#topbar h1{font-size:17px;font-weight:bold;}
+#topbar{background:#cc0000;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#topbar h1{font-size:17px;font-weight:bold;color:#fff;}
 #topbar .right{display:flex;align-items:center;gap:8px;font-size:13px;}
-#statusbar{background:#0d2040;padding:7px 14px;display:flex;justify-content:space-between;font-size:12px;color:#90caf9;flex-shrink:0;}
+#statusbar{background:#1a1a1a;padding:7px 14px;display:flex;justify-content:space-between;font-size:12px;color:#ccc;flex-shrink:0;border-bottom:1px solid #2a2a2a;}
 #map{flex:1;min-height:0;}
-#prop-list{flex-shrink:0;height:230px;overflow-y:auto;background:#0d2040;border-top:2px solid #1565c0;}
-.prop-item{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #1a3a6b;gap:10px;}
+#prop-list{flex-shrink:0;height:230px;overflow-y:auto;background:#1a1a1a;border-top:2px solid #cc0000;}
+.prop-item{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #2a2a2a;gap:10px;}
 .prop-item.done{opacity:.4;}
-.stop-badge{flex-shrink:0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;border:2px solid rgba(255,255,255,.3);}
-.stop-badge.pending{background:#c62828;}
+.stop-badge{flex-shrink:0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;border:2px solid rgba(255,255,255,.2);}
+.stop-badge.pending{background:#cc0000;}
 .stop-badge.done{background:#2e7d32;}
 .prop-text{flex:1;min-width:0;}
-.prop-name{font-size:14px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.prop-addr{font-size:11px;color:#78909c;margin-top:2px;}
+.prop-name{font-size:14px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#fff;}
+.prop-addr{font-size:11px;color:#888;margin-top:2px;}
 .prop-status{font-size:11px;font-weight:bold;flex-shrink:0;}
 .prop-status.done{color:#66bb6a;}
 </style>
@@ -171,7 +171,7 @@ function listenRoute(){
 }
 function isDone(id){return routeData[id]&&routeData[id].done===true;}
 function markerIcon(order,done){
-  const bg=done?'#2e7d32':'#c62828';const opacity=done?';opacity:0.7':'';
+  const bg=done?'#2e7d32':'#cc0000';const opacity=done?';opacity:0.7':'';
   const html='<div style="background:'+bg+';width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:12px;'+opacity+'">'+order+'</div>';
   return L.divIcon({className:'',html:html,iconSize:[30,30],iconAnchor:[15,15]});
 }
@@ -202,7 +202,7 @@ async function markDone(id){
 }
 function startGPS(){
   if(!navigator.geolocation){document.getElementById('gps-text').textContent='GPS unavailable';return;}
-  const tractorIcon=L.divIcon({className:'',html:'<div style="background:#1565c0;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #1565c0;"></div>',iconSize:[22,22],iconAnchor:[11,11]});
+  const tractorIcon=L.divIcon({className:'',html:'<div style="background:#cc0000;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #cc0000;"></div>',iconSize:[22,22],iconAnchor:[11,11]});
   gpsWatchId=navigator.geolocation.watchPosition(pos=>{
     const{latitude:lat,longitude:lng}=pos.coords;
     document.getElementById('gps-text').textContent='GPS active';
