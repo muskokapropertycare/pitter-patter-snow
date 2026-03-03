@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"/>
+<title>Pitter Patter Snow - Operator</title>
+<link rel="manifest" href="manifest.json"/>
+<meta name="theme-color" content="#1565c0"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;background:#0a1628;color:#fff;height:100dvh;display:flex;flex-direction:column;overflow:hidden;}
+#login-screen{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;gap:14px;}
+.app-logo{font-size:64px;line-height:1;}
+.app-title{font-size:24px;font-weight:bold;color:#90caf9;}
+.app-sub{font-size:14px;color:#78909c;margin-bottom:8px;}
+.field{width:100%;max-width:340px;}
+.field label{display:block;font-size:12px;color:#90caf9;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.field input{width:100%;padding:14px 16px;border-radius:12px;border:2px solid #1a3a6b;background:#0d2040;color:#fff;font-size:16px;outline:none;transition:border .2s;}
+.field input:focus{border-color:#1565c0;}
+#login-error{color:#ef5350;font-size:13px;min-height:16px;width:100%;max-width:340px;}
+.btn{width:100%;max-width:340px;padding:15px;border-radius:12px;border:none;font-size:17px;font-weight:bold;cursor:pointer;}
+.btn-blue{background:#1565c0;color:#fff;}
+.btn-sm{padding:6px 13px;border-radius:8px;font-size:12px;width:auto;}
+.btn-green{background:#2e7d32;color:#fff;}
+.btn-gray{background:#37474f;color:#ccc;}
+#app-screen{display:none;flex:1;flex-direction:column;overflow:hidden;}
+#topbar{background:#1565c0;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+#topbar h1{font-size:17px;font-weight:bold;}
+#topbar .right{display:flex;align-items:center;gap:8px;font-size:13px;}
+#statusbar{background:#0d2040;padding:7px 14px;display:flex;justify-content:space-between;font-size:12px;color:#90caf9;flex-shrink:0;}
+#map{flex:1;min-height:0;}
+#prop-list{flex-shrink:0;height:230px;overflow-y:auto;background:#0d2040;border-top:2px solid #1565c0;}
+.prop-item{display:flex;align-items:center;padding:10px 14px;border-bottom:1px solid #1a3a6b;gap:10px;}
+.prop-item.done{opacity:.4;}
+.stop-badge{flex-shrink:0;width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:13px;border:2px solid rgba(255,255,255,.3);}
+.stop-badge.pending{background:#c62828;}
+.stop-badge.done{background:#2e7d32;}
+.prop-text{flex:1;min-width:0;}
+.prop-name{font-size:14px;font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.prop-addr{font-size:11px;color:#78909c;margin-top:2px;}
+.prop-status{font-size:11px;font-weight:bold;flex-shrink:0;}
+.prop-status.done{color:#66bb6a;}
+</style>
+</head>
+<body>
+<div id="login-screen">
+  <div class="app-logo">&#10052;</div>
+  <div class="app-title">Pitter Patter Snow</div>
+  <div class="app-sub">Driver Sign In</div>
+  <div class="field"><label>Email</label><input type="email" id="inp-email" placeholder="you@example.com" autocomplete="email"/></div>
+  <div class="field"><label>Password</label><input type="password" id="inp-pass" placeholder="Password" autocomplete="current-password"/></div>
+  <div id="login-error"></div>
+  <button class="btn btn-blue" id="signin-btn">Sign In</button>
+</div>
+<div id="app-screen">
+  <div id="topbar">
+    <h1>&#10052; Pitter Patter Snow</h1>
+    <div class="right"><span id="driver-label"></span><button class="btn btn-gray btn-sm" id="signout-btn">Sign Out</button></div>
+  </div>
+  <div id="statusbar"><span id="prog-text">Loading...</span><span id="gps-text">Acquiring GPS...</span></div>
+  <div id="map"></div>
+  <div id="prop-list"></div>
+</div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getDatabase,ref,onValue,update,set,serverTimestamp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+const firebaseConfig={
+  apiKey:"AIzaSyDrVT2v2_x7QmxFSm00i17-lV321Jbe-7M",
+  authDomain:"pitter-patter-snow.firebaseapp.com",
+  databaseURL:"https://pitter-patter-snow-default-rtdb.firebaseio.com",
+  projectId:"pitter-patter-snow",
+  storageBucket:"pitter-patter-snow.firebasestorage.app",
+  messagingSenderId:"255157435426",
+  appId:"1:255157435426:web:6d0af936eeaa0d89ad9e7b"
+};
+let PROPERTIES=[];
+const fbApp=initializeApp(firebaseConfig),auth=getAuth(fbApp),db=getDatabase(fbApp);
+let map,myDot,markers={},routeData={},gpsWatchId=null,currentUser=null;
+let operatorKey=null;
+let routeListener=null,configListener=null;
+onAuthStateChanged(auth,user=>{
+  if(user){
+    currentUser=user;
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app-screen').style.display='flex';
+    document.getElementById('driver-label').textContent=user.email.split('@')[0];
+    if(!map)initMap();
+    loadOperatorRouteAndStart();
+  }else{
+    currentUser=null;
+    document.getElementById('login-screen').style.display='flex';
+    document.getElementById('app-screen').style.display='none';
+    if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+    if(routeListener){routeListener();routeListener=null;}
+    if(configListener){configListener();configListener=null;}
+    PROPERTIES=[];routeData={};operatorKey=null;markers={};
+  }
+});
+async function doLogin(){
+  const email=document.getElementById('inp-email').value.trim();
+  const pass=document.getElementById('inp-pass').value;
+  const errEl=document.getElementById('login-error');
+  errEl.textContent='';
+  if(!email||!pass){errEl.textContent='Please enter email and password.';return;}
+  try{await signInWithEmailAndPassword(auth,email,pass);}
+  catch(e){
+    const msgs={'auth/invalid-credential':'Wrong email or password.','auth/user-not-found':'No account found.','auth/wrong-password':'Incorrect password.','auth/invalid-email':'Invalid email.','auth/too-many-requests':'Too many attempts.'};
+    errEl.textContent=msgs[e.code]||'Sign in failed. ('+e.code+')';
+  }
+}
+document.getElementById('signin-btn').addEventListener('click',doLogin);
+document.getElementById('signout-btn').addEventListener('click',async()=>{if(confirm('Sign out?'))await signOut(auth);});
+document.getElementById('inp-pass').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function initMap(){
+  map=L.map('map',{zoomControl:true}).setView([45.031,-79.320],14);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'&copy; OpenStreetMap'}).addTo(map);
+}
+function loadOperatorRouteAndStart(){
+  document.getElementById('prog-text').textContent='Loading route...';
+  configListener=onValue(ref(db,'route/config/operators'),function(snap){
+    var operators=snap.val()||{};
+    var userEmail=currentUser?currentUser.email:'';
+    operatorKey=null;
+    Object.entries(operators).forEach(function(entry){if(entry[1].email===userEmail)operatorKey=entry[0];});
+    if(operatorKey){
+      onValue(ref(db,'route/config/operatorRoutes/'+operatorKey),function(routeSnap){
+        var routeProps=routeSnap.val();
+        if(routeProps&&Object.keys(routeProps).length>0){PROPERTIES=Object.values(routeProps).sort(function(a,b){return a.order-b.order;});}
+        else{PROPERTIES=[];document.getElementById('prog-text').textContent='No route assigned yet';}
+        rebuildMapMarkers();listenRoute();startGPS();
+      },{onlyOnce:true});
+    }else{
+      onValue(ref(db,'route/config/properties'),function(snap){
+        var fbProps=snap.val();
+        if(fbProps){PROPERTIES=Object.values(fbProps).sort(function(a,b){return a.order-b.order;});}
+        else{PROPERTIES=[];}
+        rebuildMapMarkers();listenRoute();startGPS();
+      },{onlyOnce:true});
+    }
+  },{onlyOnce:true});
+}
+function rebuildMapMarkers(){
+  Object.values(markers).forEach(function(m){map.removeLayer(m);});markers={};
+  PROPERTIES.forEach(function(p){
+    const done=isDone(p.id);
+    const m=L.marker([p.lat,p.lng],{icon:markerIcon(p.order,done)}).addTo(map)
+      .bindPopup('<b>#'+p.order+' - '+p.name+'</b><br>'+p.addr+'<br>'+(done?'✓ Done':'Pending'));
+    if(!done)m.on('click',()=>markDone(p.id));
+    markers[p.id]=m;
+  });
+}
+function listenRoute(){
+  var progressPath=operatorKey?('route/operatorProgress/'+operatorKey):'route/operatorProgress/__unassigned__';
+  if(routeListener){routeListener();routeListener=null;}
+  routeListener=onValue(ref(db,progressPath),snap=>{
+    routeData=snap.val()||{};
+    PROPERTIES.forEach(function(p){
+      const done=isDone(p.id);
+      if(markers[p.id]){
+        markers[p.id].setIcon(markerIcon(p.order,done));
+        markers[p.id].setPopupContent('<b>#'+p.order+' - '+p.name+'</b><br>'+p.addr+'<br>'+(done?'✓ Done':'Pending'));
+        markers[p.id].off('click');
+        if(!done)markers[p.id].on('click',()=>markDone(p.id));
+      }
+    });
+    renderList();renderProgress();
+  });
+}
+function isDone(id){return routeData[id]&&routeData[id].done===true;}
+function markerIcon(order,done){
+  const bg=done?'#2e7d32':'#c62828';const opacity=done?';opacity:0.7':'';
+  const html='<div style="background:'+bg+';width:30px;height:30px;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;font-size:12px;'+opacity+'">'+order+'</div>';
+  return L.divIcon({className:'',html:html,iconSize:[30,30],iconAnchor:[15,15]});
+}
+function renderList(){
+  const el=document.getElementById('prop-list');el.innerHTML='';
+  PROPERTIES.forEach(p=>{
+    const done=isDone(p.id);
+    const row=document.createElement('div');row.className='prop-item'+(done?' done':'');
+    const badge=document.createElement('div');badge.className='stop-badge '+(done?'done':'pending');badge.textContent=p.order;
+    const text=document.createElement('div');text.className='prop-text';
+    text.innerHTML='<div class="prop-name">'+p.name+'</div><div class="prop-addr">'+p.addr+'</div>';
+    row.appendChild(badge);row.appendChild(text);
+    if(done){const s=document.createElement('span');s.className='prop-status done';s.textContent='DONE';row.appendChild(s);}
+    else{const btn=document.createElement('button');btn.className='btn btn-green btn-sm';btn.textContent='Done';btn.addEventListener('click',()=>markDone(p.id));row.appendChild(btn);}
+    el.appendChild(row);
+  });
+}
+function renderProgress(){
+  const total=PROPERTIES.length,doneCount=PROPERTIES.filter(p=>isDone(p.id)).length;
+  document.getElementById('prog-text').textContent=doneCount+' / '+total+' driveways complete';
+}
+async function markDone(id){
+  const p=PROPERTIES.find(x=>x.id===id);
+  if(!p||isDone(id))return;
+  if(!confirm('Mark Stop #'+p.order+' "'+p.name+'" as complete?'))return;
+  var progressPath=operatorKey?('route/operatorProgress/'+operatorKey+'/'):'route/operatorProgress/__unassigned__/';
+  await update(ref(db,progressPath+id),{done:true,completedBy:currentUser?currentUser.email:'unknown',completedAt:serverTimestamp()});
+}
+function startGPS(){
+  if(!navigator.geolocation){document.getElementById('gps-text').textContent='GPS unavailable';return;}
+  const tractorIcon=L.divIcon({className:'',html:'<div style="background:#1565c0;width:22px;height:22px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 10px #1565c0;"></div>',iconSize:[22,22],iconAnchor:[11,11]});
+  gpsWatchId=navigator.geolocation.watchPosition(pos=>{
+    const{latitude:lat,longitude:lng}=pos.coords;
+    document.getElementById('gps-text').textContent='GPS active';
+    if(!myDot){myDot=L.marker([lat,lng],{icon:tractorIcon,zIndexOffset:1000}).addTo(map).bindPopup('You are here');}
+    else{myDot.setLatLng([lat,lng]);}
+    const uid=currentUser?currentUser.uid:'unknown';
+    set(ref(db,'operators/'+uid),{email:currentUser?currentUser.email:'',lat,lng,updatedAt:serverTimestamp()});
+  },()=>{document.getElementById('gps-text').textContent='GPS error';},{enableHighAccuracy:true,maximumAge:4000,timeout:10000});
+}
+</script>
+</body>
+</html>
