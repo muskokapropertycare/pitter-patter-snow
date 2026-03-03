@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Pitter Patter Snow - Manager Dashboard</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;background:#0a1628;color:#fff;min-height:100vh;}
+#login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:24px;background:#0a1628;}
+.login-box{background:#0d2040;border-radius:16px;padding:36px 32px;width:100%;max-width:380px;border:1px solid #1a3a6b;}
+.login-logo{font-size:48px;text-align:center;margin-bottom:8px;}
+.login-title{font-size:22px;font-weight:bold;text-align:center;color:#90caf9;margin-bottom:4px;}
+.login-sub{font-size:13px;text-align:center;color:#78909c;margin-bottom:24px;}
+.field{margin-bottom:16px;}
+.field label{display:block;font-size:12px;color:#90caf9;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+.field input{width:100%;padding:12px 14px;border-radius:10px;border:1.5px solid #1a3a6b;background:#0a1628;color:#fff;font-size:15px;outline:none;transition:border-color .2s;}
+.field input:focus{border-color:#1565c0;}
+#login-error{color:#ef5350;font-size:13px;min-height:18px;margin-bottom:10px;}
+.btn{width:100%;padding:14px;border-radius:10px;border:none;font-size:16px;font-weight:bold;cursor:pointer;transition:background .2s;}
+.btn-blue{background:#1565c0;color:#fff;}
+.btn-blue:hover{background:#1976d2;}
+#app-screen{display:none;flex-direction:column;min-height:100vh;}
+#topbar{background:#1565c0;padding:10px 16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+#topbar h1{font-size:17px;font-weight:bold;}
+.topbar-right{display:flex;align-items:center;gap:12px;}
+#last-updated{font-size:11px;color:#bbdefb;}
+.btn-sm{padding:6px 14px;border-radius:8px;border:none;font-size:12px;font-weight:bold;cursor:pointer;}
+.btn-gray{background:#37474f;color:#ccc;}
+.btn-red{background:#c62828;color:#fff;}
+.btn-orange{background:#e65100;color:#fff;}
+#nav-tabs{display:flex;background:#0d2040;border-bottom:2px solid #1a3a6b;}
+.nav-tab{padding:12px 20px;font-size:13px;font-weight:bold;cursor:pointer;color:#78909c;border-bottom:3px solid transparent;transition:all .2s;}
+.nav-tab.active{color:#90caf9;border-bottom-color:#1565c0;}
+#tab-dashboard{display:block;}
+#stats{display:flex;flex-wrap:wrap;gap:10px;padding:14px 16px;background:#0d2040;}
+.stat{flex:1;min-width:120px;background:#1a3a6b;border-radius:12px;padding:12px 16px;}
+.stat-label{font-size:11px;color:#90caf9;text-transform:uppercase;letter-spacing:.5px;}
+.stat-value{font-size:30px;font-weight:bold;margin-top:4px;}
+.stat-value.green{color:#66bb6a;}
+.stat-value.red{color:#ef5350;}
+.stat-value.blue{color:#64b5f6;}
+#pbar-wrap{padding:0 16px 12px;background:#0d2040;}
+#pbar-bg{background:#1a3a6b;border-radius:10px;height:20px;overflow:hidden;}
+#pbar-fill{background:linear-gradient(90deg,#1565c0,#2e7d32);height:100%;border-radius:10px;transition:width .6s ease;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:bold;}
+#map{height:300px;}
+#tractors-section{padding:14px 16px;background:#0d2040;border-top:2px solid #1a3a6b;}
+#tractors-section h2{font-size:13px;text-transform:uppercase;color:#90caf9;letter-spacing:.5px;margin-bottom:10px;}
+.tractor-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #1a3a6b;font-size:13px;}
+.tractor-dot{width:12px;height:12px;border-radius:50%;background:#1565c0;flex-shrink:0;}
+.tractor-name{font-weight:bold;}
+#operators-section{padding:14px 16px;background:#0a1628;border-top:2px solid #1a3a6b;}
+#operators-section h2{font-size:13px;text-transform:uppercase;color:#90caf9;letter-spacing:.5px;margin-bottom:12px;}
+.operator-card{background:#0d2040;border-radius:12px;border:1px solid #1a3a6b;margin-bottom:14px;overflow:hidden;}
+.operator-card-header{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:#1a3a6b;flex-wrap:wrap;gap:8px;}
+.operator-card-name{font-weight:bold;font-size:14px;color:#90caf9;}
+.operator-card-stats{font-size:12px;color:#ccc;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.operator-pbar-wrap{padding:6px 14px 2px;background:#0d2040;}
+.operator-pbar-bg{background:#1a3a6b;border-radius:6px;height:10px;overflow:hidden;}
+.operator-pbar-fill{height:100%;border-radius:6px;transition:width .5s;}
+.operator-lists{display:grid;grid-template-columns:1fr 1fr;gap:0;padding:8px 14px 10px;}
+.list-section h3{font-size:11px;text-transform:uppercase;color:#90caf9;letter-spacing:.5px;margin-bottom:8px;}
+.list-item{display:flex;align-items:flex-start;gap:7px;padding:5px 0;border-bottom:1px solid #1a3a6b;font-size:12px;}
+.list-num{width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;flex-shrink:0;}
+.list-num.done{background:#2e7d32;}
+.list-num.todo{background:#c62828;}
+.operator-card-footer{padding:8px 14px 12px;display:flex;gap:8px;flex-wrap:wrap;}
+#reset-section{padding:14px 16px;background:#0a1628;border-top:2px solid #1a3a6b;}
+#tab-clients{display:none;padding:16px;}
+.section-title{font-size:16px;font-weight:bold;color:#90caf9;margin-bottom:16px;padding-bottom:8px;border-bottom:2px solid #1a3a6b;}
+.add-client-form{background:#0d2040;border-radius:12px;padding:16px;margin-bottom:20px;border:1px solid #1a3a6b;}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-row-4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:12px;margin-bottom:12px;}
+.form-field label{display:block;font-size:11px;color:#90caf9;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px;}
+.form-field input,.form-field select{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #1a3a6b;background:#0a1628;color:#fff;font-size:14px;outline:none;transition:border-color .2s;}
+.form-field input:focus,.form-field select:focus{border-color:#1565c0;}
+.form-field select option{background:#0a1628;}
+.btn-green{background:#2e7d32;color:#fff;}
+.btn-green:hover{background:#388e3c;}
+.btn-add{padding:10px 20px;border-radius:8px;border:none;font-size:14px;font-weight:bold;cursor:pointer;}
+#form-msg{font-size:13px;min-height:18px;margin-top:8px;}
+.form-msg-ok{color:#66bb6a;}
+.form-msg-err{color:#ef5350;}
+#client-table{width:100%;border-collapse:collapse;}
+#client-table th{text-align:left;font-size:11px;color:#90caf9;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:2px solid #1a3a6b;}
+#client-table td{padding:9px 10px;border-bottom:1px solid #1a3a6b;font-size:13px;vertical-align:middle;}
+#client-table tr:hover td{background:#0d2040;}
+.remove-btn{background:#c62828;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:bold;cursor:pointer;}
+.remove-btn:hover{background:#e53935;}
+.order-badge{background:#1a3a6b;color:#90caf9;border-radius:6px;padding:2px 8px;font-size:12px;font-weight:bold;}
+.operator-badge{border-radius:6px;padding:2px 8px;font-size:11px;font-weight:bold;color:#fff;}
+#search-clients{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #1a3a6b;background:#0d2040;color:#fff;font-size:14px;outline:none;margin-bottom:14px;}
+#search-clients:focus{border-color:#1565c0;}
+#tab-routes{display:none;padding:16px;}
+.routes-layout{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:start;}
+@media(max-width:900px){.routes-layout{grid-template-columns:1fr;}}
+.unassigned-pool{background:#0d2040;border-radius:12px;border:1px solid #1a3a6b;padding:14px;}
+.unassigned-pool h3{font-size:13px;text-transform:uppercase;color:#90caf9;letter-spacing:.5px;margin-bottom:10px;}
+.operator-route-col{background:#0d2040;border-radius:12px;border:1px solid #1a3a6b;padding:14px;margin-bottom:14px;}
+.operator-route-col h3{font-size:14px;font-weight:bold;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.op-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;display:inline-block;}
+.op-sub{font-size:11px;color:#78909c;margin-bottom:10px;}
+.route-drop-zone{min-height:50px;border:2px dashed #1a3a6b;border-radius:8px;padding:6px;background:#0a1628;}
+.route-drop-zone.drag-over{border-color:#1565c0;background:#0d2040;}
+.route-item{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:7px;background:#1a3a6b;margin-bottom:5px;font-size:12px;cursor:grab;user-select:none;gap:8px;}
+.route-item:hover{background:#1e4a8a;}
+.route-item-left{display:flex;align-items:center;gap:8px;flex:1;min-width:0;}
+.route-item-num{width:22px;height:22px;border-radius:50%;background:#0a1628;color:#90caf9;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;flex-shrink:0;}
+.route-item-name{font-weight:bold;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.route-item-addr{font-size:10px;color:#78909c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.unassign-btn{background:none;border:1px solid #ef5350;color:#ef5350;border-radius:5px;padding:2px 7px;font-size:10px;font-weight:bold;cursor:pointer;flex-shrink:0;}
+.unassign-btn:hover{background:#ef5350;color:#fff;}
+.assign-select{background:#0a1628;color:#fff;border:1px solid #1a3a6b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0;}
+.save-routes-bar{position:sticky;bottom:0;background:#0d2040;border-top:2px solid #1565c0;padding:12px 16px;display:flex;align-items:center;gap:14px;margin-top:16px;}
+#save-routes-msg{font-size:13px;}
+.op-route-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.op-count-badge{font-size:11px;color:#90caf9;background:#0a1628;border-radius:6px;padding:2px 8px;}
+#routes-search{width:100%;padding:9px 12px;border-radius:8px;border:1.5px solid #1a3a6b;background:#0d2040;color:#fff;font-size:14px;outline:none;margin-bottom:14px;}
+#routes-search:focus{border-color:#1565c0;}
+.operator-mgmt-info{background:#0d2040;border-radius:10px;border:1px solid #1a3a6b;padding:12px 16px;margin-bottom:14px;font-size:13px;color:#90caf9;line-height:1.6;}
+.operator-mgmt-info b{color:#fff;}
+</style>
+</head>
+<body>
+<div id="login-screen">
+<div class="login-box">
+<div class="login-logo">&#10052;</div>
+<div class="login-title">Pitter Patter Snow</div>
+<div class="login-sub">Manager Dashboard &mdash; Sign In</div>
+<div class="field"><label>Email</label><input type="email" id="login-email" placeholder="your@email.com" autocomplete="email"/></div>
+<div class="field"><label>Password</label><input type="password" id="login-password" placeholder="Password" autocomplete="current-password"/></div>
+<div id="login-error"></div>
+<button class="btn btn-blue" id="login-btn">Sign In</button>
+</div>
+</div>
+<div id="app-screen">
+<div id="topbar">
+<h1>&#10052; Pitter Patter Snow &mdash; Manager Dashboard</h1>
+<div class="topbar-right">
+<span id="last-updated"></span>
+<button class="btn-sm btn-gray" id="signout-btn">Sign Out</button>
+</div>
+</div>
+<div id="nav-tabs">
+<div class="nav-tab active" id="tab-btn-dashboard">&#128202; Live Dashboard</div>
+<div class="nav-tab" id="tab-btn-clients">&#128203; Manage Clients</div>
+<div class="nav-tab" id="tab-btn-routes">&#128661; Routes</div>
+</div>
+<div id="tab-dashboard">
+<div id="stats">
+<div class="stat"><div class="stat-label">Overall Progress</div><div class="stat-value blue" id="s-pct">0%</div></div>
+<div class="stat"><div class="stat-label">Completed</div><div class="stat-value green" id="s-done">0</div></div>
+<div class="stat"><div class="stat-label">Remaining</div><div class="stat-value red" id="s-left">0</div></div>
+<div class="stat"><div class="stat-label">Active Drivers</div><div class="stat-value blue" id="s-drivers">0</div></div>
+</div>
+<div id="pbar-wrap"><div id="pbar-bg"><div id="pbar-fill" style="width:0%">0%</div></div></div>
+<div id="map"></div>
+<div id="tractors-section"><h2>Live Operator Positions</h2><div id="tractor-list"></div></div>
+<div id="operators-section"><h2>Operator Routes</h2><div id="operator-cards"></div></div>
+<div id="reset-section"><button class="btn btn-red" style="max-width:240px;" id="reset-all-btn">&#9888; Reset All Operators</button></div>
+</div>
+<div id="tab-clients">
+<div class="section-title">Add New Client</div>
+<div class="add-client-form">
+<div class="form-row">
+<div class="form-field"><label>Client Name *</label><input type="text" id="new-name" placeholder="e.g. John Smith"/></div>
+<div class="form-field"><label>Address *</label><input type="text" id="new-addr" placeholder="e.g. 123 Main St"/></div>
+</div>
+<div class="form-row-4">
+<div class="form-field"><label>Latitude *</label><input type="number" id="new-lat" placeholder="e.g. 45.0334" step="0.000001"/></div>
+<div class="form-field"><label>Longitude *</label><input type="number" id="new-lng" placeholder="e.g. -79.3089" step="0.000001"/></div>
+<div class="form-field"><label>Route Order</label><input type="number" id="new-order" placeholder="Auto if blank"/></div>
+<div class="form-field"><label>Assign to Operator</label><select id="new-operator"><option value="">-- Unassigned --</option></select></div>
+</div>
+<button class="btn-add btn-green" id="add-btn">Add Client to Route</button>
+<div id="form-msg"></div>
+</div>
+<div class="section-title">Current Clients (<span id="client-count">0</span>)</div>
+<input type="text" id="search-clients" placeholder="Search clients by name or address..."/>
+<table id="client-table">
+<thead><tr><th>#</th><th>Name</th><th>Address</th><th>Operator</th><th>Status</th><th>Action</th></tr></thead>
+<tbody id="client-tbody"></tbody>
+</table>
+</div>
+<div id="tab-routes">
+<div class="section-title">Assign Routes to Operators</div>
+<div class="operator-mgmt-info">
+<b>How it works:</b> Operators are managed in the Firebase Console. Once added in Firebase Auth, their account appears here automatically (matched by email). Drag clients into each operator&#39;s route or use the quick-assign dropdown. Click <b>Save Routes</b> when done &mdash; changes push live to all operator apps immediately.
+</div>
+<input type="text" id="routes-search" placeholder="Search clients to find &amp; assign..."/>
+<div class="routes-layout">
+<div>
+<div class="unassigned-pool">
+<h3>&#128204; Unassigned Stops (<span id="unassigned-count">0</span>)</h3>
+<div class="route-drop-zone" id="drop-unassigned"></div>
+</div>
+</div>
+<div id="operator-route-cols"></div>
+</div>
+<div class="save-routes-bar">
+<button class="btn-add btn-green" id="save-routes-btn">&#10003; Save Routes</button>
+<span id="save-routes-msg"></span>
+</div>
+</div>
+</div>
+<script type="module">
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getDatabase,ref,onValue,set,get,update}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import{getAuth,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const firebaseConfig={apiKey:"AIzaSyDrVT2v2_x7QmxFSm00i17-lV321Jbe-7M",authDomain:"pitter-patter-snow.firebaseapp.com",databaseURL:"https://pitter-patter-snow-default-rtdb.firebaseio.com",projectId:"pitter-patter-snow",storageBucket:"pitter-patter-snow.firebasestorage.app",messagingSenderId:"255157435426",appId:"1:255157435426:web:6d0af936eeaa0d89ad9e7b"};
+const fbApp=initializeApp(firebaseConfig);
+const db=getDatabase(fbApp);
+const auth=getAuth(fbApp);
+let PROPERTIES=[];
+let OPERATORS={};
+let map,initialized=false;
+let markerMap={};
+const OP_COLORS=["#1565c0","#e65100","#6a1b9a","#00695c","#ad1457","#f57f17","#1b5e20","#880e4f"];
+let _pendingAssignments=null;
+document.getElementById("login-btn").addEventListener("click",doLogin);
+document.getElementById("login-password").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+document.getElementById("login-email").addEventListener("keydown",function(e){if(e.key==="Enter")doLogin();});
+document.getElementById("signout-btn").addEventListener("click",function(){signOut(auth);});
+document.getElementById("reset-all-btn").addEventListener("click",confirmResetAll);
+document.getElementById("add-btn").addEventListener("click",addClient);
+document.getElementById("search-clients").addEventListener("input",renderClientTable);
+document.getElementById("routes-search").addEventListener("input",renderRoutesTab);
+document.getElementById("save-routes-btn").addEventListener("click",saveRoutes);
+document.getElementById("tab-btn-dashboard").addEventListener("click",function(){switchTab("dashboard");});
+document.getElementById("tab-btn-clients").addEventListener("click",function(){switchTab("clients");});
+document.getElementById("tab-btn-routes").addEventListener("click",function(){switchTab("routes");});
+async function doLogin(){
+  var email=document.getElementById("login-email").value.trim();
+  var pwd=document.getElementById("login-password").value;
+  var errEl=document.getElementById("login-error");
+  errEl.textContent="Signing in...";
+  try{await signInWithEmailAndPassword(auth,email,pwd);errEl.textContent="";}
+  catch(e){errEl.textContent="Invalid email or password. Please try again.";}
+}
+onAuthStateChanged(auth,function(user){
+  if(user){
+    document.getElementById("login-screen").style.display="none";
+    document.getElementById("app-screen").style.display="flex";
+    if(!initialized){initialized=true;initApp();}
+  }else{
+    document.getElementById("login-screen").style.display="flex";
+    document.getElementById("app-screen").style.display="none";
+  }
+});
+function switchTab(tab){
+  ["dashboard","clients","routes"].forEach(function(t){
+    document.getElementById("tab-"+t).style.display=tab===t?"block":"none";
+    document.getElementById("tab-btn-"+t).className="nav-tab"+(tab===t?" active":"");
+  });
+  if(tab==="clients"){renderClientTable();}
+  if(tab==="routes"){_pendingAssignments=null;renderRoutesTab();}
+}
+function initApp(){
+  map=L.map("map").setView([45.035,-79.315],13);
+  L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",{attribution:"&copy; OpenStreetMap"}).addTo(map);
+  onValue(ref(db,"route/config/operators"),function(snap){
+    OPERATORS=snap.val()||{};
+    populateOperatorSelects();
+    if(document.getElementById("tab-routes").style.display==="block"){renderRoutesTab();}
+  });
+  onValue(ref(db,"route/config/properties"),function(snap){
+    var fbProps=snap.val();
+    if(fbProps){PROPERTIES=Object.values(fbProps);}
+    else{savePropertiesToFirebase();return;}
+    PROPERTIES.sort(function(a,b){return a.order-b.order;});
+    PROPERTIES.forEach(function(p){if(!p.operator)p.operator="";});
+    startListening();
+  },{onlyOnce:true});
+}
+function operatorColor(uid){
+  if(!uid)return"#546e7a";
+  if(OPERATORS[uid]&&OPERATORS[uid].color)return OPERATORS[uid].color;
+  var idx=Object.keys(OPERATORS).indexOf(uid);
+  return OP_COLORS[idx%OP_COLORS.length]||"#546e7a";
+}
+function operatorName(uid){
+  if(!uid)return"Unassigned";
+  if(OPERATORS[uid])return OPERATORS[uid].name||OPERATORS[uid].email||uid;
+  return uid;
+}
+function populateOperatorSelects(){
+  var sel=document.getElementById("new-operator");
+  if(!sel)return;
+  var prev=sel.value;
+  sel.innerHTML='<option value="">-- Unassigned --</option>';
+  Object.entries(OPERATORS).forEach(function(entry){
+    var uid=entry[0],op=entry[1];
+    var opt=document.createElement("option");
+    opt.value=uid;opt.textContent=(op.name||op.email||uid);
+    sel.appendChild(opt);
+  });
+  sel.value=prev;
+}
+function startListening(){
+  Object.values(markerMap).forEach(function(m){map.removeLayer(m);});
+  markerMap={};
+  PROPERTIES.forEach(function(p){
+    var color=operatorColor(p.operator);
+    var icon=L.divIcon({className:"",html:'<div style="background:'+color+';color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid #fff;">'+p.order+'</div>',iconSize:[26,26],iconAnchor:[13,13]});
+    var marker=L.marker([p.lat,p.lng],{icon}).addTo(map).bindPopup('<b>'+p.order+'. '+p.name+'</b><br/>'+p.addr+'<br/>Operator: '+operatorName(p.operator));
+    markerMap[p.id]=marker;
+  });
+  onValue(ref(db,"route/operatorProgress"),function(snap){
+    var allProgress=snap.val()||{};
+    updateDashboard(allProgress);
+  });
+  onValue(ref(db,"operators"),function(snap){
+    var ops=snap.val()||{};
+    var active=Object.values(ops).filter(function(v){return v.lat&&v.lng;});
+    document.getElementById("s-drivers").textContent=active.length;
+    var tList=document.getElementById("tractor-list");tList.innerHTML="";
+    active.forEach(function(v){
+      var displayName=v.email||"Unknown Operator";
+      var d=document.createElement("div");d.className="tractor-row";
+      d.innerHTML='<div class="tractor-dot"></div><div><div class="tractor-name">'+displayName+'</div><div style="color:#78909c;font-size:11px;">'+v.lat.toFixed(5)+', '+v.lng.toFixed(5)+'</div></div>';
+      tList.appendChild(d);
+    });
+  });
+}
+function updateDashboard(allProgress){
+  var totalAll=PROPERTIES.length,doneAll=0;
+  var byOperator={};
+  PROPERTIES.forEach(function(p){
+    var opKey=p.operator||"__unassigned__";
+    if(!byOperator[opKey])byOperator[opKey]=[];
+    byOperator[opKey].push(p);
+  });
+  PROPERTIES.forEach(function(p){
+    var opKey=p.operator||"__unassigned__";
+    var progress=(opKey!=="__unassigned__")?(allProgress[opKey]||{}):(allProgress["__unassigned__"]||{});
+    if(progress[p.id]&&progress[p.id].done)doneAll++;
+  });
+  var pct=totalAll>0?Math.round(doneAll/totalAll*100):0;
+  document.getElementById("s-pct").textContent=pct+"%";
+  document.getElementById("s-done").textContent=doneAll;
+  document.getElementById("s-left").textContent=totalAll-doneAll;
+  var fill=document.getElementById("pbar-fill");fill.style.width=pct+"%";fill.textContent=pct+"%";
+  document.getElementById("last-updated").textContent="Updated: "+new Date().toLocaleTimeString();
+  PROPERTIES.forEach(function(p){
+    var opKey=p.operator||"__unassigned__";
+    var progress=(opKey!=="__unassigned__")?(allProgress[opKey]||{}):(allProgress["__unassigned__"]||{});
+    var isDone=progress[p.id]&&progress[p.id].done===true;
+    var baseColor=operatorColor(p.operator);
+    var markerColor=isDone?"#2e7d32":baseColor;
+    if(markerMap[p.id]){
+      var iconHtml='<div style="background:'+markerColor+';color:#fff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold;border:2px solid #fff;'+(isDone?"opacity:0.6":"")+'">>'+p.order+'</div>';
+      markerMap[p.id].setIcon(L.divIcon({className:"",html:iconHtml,iconSize:[26,26],iconAnchor:[13,13]}));
+    }
+  });
+  renderOperatorCards(byOperator,allProgress);
+}
+function renderOperatorCards(byOperator,allProgress){
+  var container=document.getElementById("operator-cards");container.innerHTML="";
+  Object.entries(OPERATORS).forEach(function(entry){
+    var uid=entry[0],op=entry[1];
+    var props=byOperator[uid]||[];
+    var progress=allProgress[uid]||{};
+    renderOpCard(container,uid,op.name||op.email||uid,op.color||operatorColor(uid),props,progress);
+  });
+  var unassigned=byOperator["__unassigned__"]||[];
+  if(unassigned.length>0){renderOpCard(container,"__unassigned__","Unassigned","#546e7a",unassigned,allProgress["__unassigned__"]||{});}
+}
+function renderOpCard(container,uid,name,color,props,progress){
+  var total=props.length;
+  var doneCount=props.filter(function(p){return progress[p.id]&&progress[p.id].done;}).length;
+  var pct=total>0?Math.round(doneCount/total*100):0;
+  var card=document.createElement("div");card.className="operator-card";
+  var hdr=document.createElement("div");hdr.className="operator-card-header";
+  hdr.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><div style="width:14px;height:14px;border-radius:50%;background:'+color+';flex-shrink:0;"></div><div class="operator-card-name">'+name+'</div></div><div class="operator-card-stats"><span style="color:#66bb6a;">✓ '+doneCount+' done</span><span style="color:#ef5350;">○ '+(total-doneCount)+' left</span><span style="color:#90caf9;">'+pct+'%</span><span style="color:#78909c;">'+total+' stops</span></div>';
+  card.appendChild(hdr);
+  var pbarWrap=document.createElement("div");pbarWrap.className="operator-pbar-wrap";
+  pbarWrap.innerHTML='<div class="operator-pbar-bg"><div class="operator-pbar-fill" style="width:'+pct+'%;background:'+color+'"></div></div>';
+  card.appendChild(pbarWrap);
+  var lists=document.createElement("div");lists.className="operator-lists";
+  var doneHtml='<div class="list-section"><h3>Completed ('+doneCount+')</h3>';
+  var todoHtml='<div class="list-section"><h3>To Do ('+(total-doneCount)+')</h3>';
+  props.forEach(function(p){
+    var isDone=progress[p.id]&&progress[p.id].done;
+    var by=progress[p.id]&&progress[p.id].completedBy?" by "+progress[p.id].completedBy:"";
+    var itemHtml='<div class="list-item"><div class="list-num '+(isDone?"done":"todo")+'">'+p.order+'</div><div><b>'+p.name+'</b><br/><span style="color:#78909c;font-size:11px;">'+p.addr+'</span>'+(by?'<br/><span style="color:#64b5f6;font-size:11px;">'+by+'</span>':"")+'</div></div>';
+    if(isDone)doneHtml+=itemHtml;else todoHtml+=itemHtml;
+  });
+  doneHtml+="</div>";todoHtml+="</div>";
+  lists.innerHTML=doneHtml+todoHtml;
+  card.appendChild(lists);
+  var footer=document.createElement("div");footer.className="operator-card-footer";
+  if(uid!=="__unassigned__"){
+    var resetBtn=document.createElement("button");resetBtn.className="btn-sm btn-red";resetBtn.textContent="Reset "+name+"'s Progress";
+    resetBtn.addEventListener("click",function(){confirmResetOperator(uid,name);});
+    footer.appendChild(resetBtn);
+  }
+  card.appendChild(footer);
+  container.appendChild(card);
+}
+function confirmResetAll(){if(confirm("Reset ALL operators' completed driveways? This cannot be undone.")){set(ref(db,"route/operatorProgress"),null);}}
+function confirmResetOperator(uid,name){if(confirm("Reset "+name+"'s completed driveways? This cannot be undone.")){set(ref(db,"route/operatorProgress/"+uid),null);}}
+function savePropertiesToFirebase(){
+  var obj={};PROPERTIES.forEach(function(p){obj[p.id]=p;});
+  set(ref(db,"route/config/properties"),obj);
+  rebuildOperatorRoutes();
+}
+function rebuildOperatorRoutes(){
+  var byOp={};
+  PROPERTIES.forEach(function(p){
+    var uid=p.operator||"__unassigned__";
+    if(!byOp[uid])byOp[uid]={};
+    byOp[uid][p.id]=p;
+  });
+  set(ref(db,"route/config/operatorRoutes"),byOp);
+}
+async function addClient(){
+  var name=document.getElementById("new-name").value.trim();
+  var addr=document.getElementById("new-addr").value.trim();
+  var lat=parseFloat(document.getElementById("new-lat").value);
+  var lng=parseFloat(document.getElementById("new-lng").value);
+  var orderInput=document.getElementById("new-order").value;
+  var operatorUid=document.getElementById("new-operator").value;
+  var msgEl=document.getElementById("form-msg");
+  if(!name||!addr||isNaN(lat)||isNaN(lng)){msgEl.textContent="Please fill in Name, Address, Latitude, and Longitude.";msgEl.className="form-msg-err";return;}
+  var maxOrder=PROPERTIES.reduce(function(m,p){return Math.max(m,p.order);},0);
+  var order=orderInput&&!isNaN(parseInt(orderInput))?parseInt(orderInput):maxOrder+1;
+  if(orderInput&&!isNaN(parseInt(orderInput))){PROPERTIES.forEach(function(p){if(p.order>=order)p.order++;});}
+  var id="p"+Date.now();
+  PROPERTIES.push({id:id,order:order,name:name,addr:addr,lat:lat,lng:lng,operator:operatorUid});
+  PROPERTIES.sort(function(a,b){return a.order-b.order;});
+  savePropertiesToFirebase();
+  msgEl.textContent="Added "+name+" - route updated.";msgEl.className="form-msg-ok";
+  ["new-name","new-addr","new-lat","new-lng","new-order"].forEach(function(id){document.getElementById(id).value="";});
+  document.getElementById("new-operator").value="";
+  renderClientTable();
+}
+function renderClientTable(){
+  var q=(document.getElementById("search-clients").value||"").toLowerCase();
+  var filtered=PROPERTIES.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0||p.addr.toLowerCase().indexOf(q)>=0;});
+  document.getElementById("client-count").textContent=PROPERTIES.length;
+  var tbody=document.getElementById("client-tbody");tbody.innerHTML="";
+  get(ref(db,"route/operatorProgress")).then(function(snap){
+    var allProgress=snap.val()||{};
+    filtered.sort(function(a,b){return a.order-b.order;}).forEach(function(p){
+      var opKey=p.operator||"__unassigned__";
+      var progress=allProgress[opKey]||{};
+      var isDone=progress[p.id]&&progress[p.id].done===true;
+      var opColor=operatorColor(p.operator);var opName=operatorName(p.operator);
+      var tr=document.createElement("tr");
+      var td1=document.createElement("td");td1.innerHTML='<span class="order-badge">#'+p.order+'</span>';
+      var td2=document.createElement("td");td2.innerHTML='<b>'+p.name+'</b>';
+      var td3=document.createElement("td");td3.style.color="#90caf9";td3.textContent=p.addr;
+      var td4=document.createElement("td");
+      td4.innerHTML=p.operator?'<span class="operator-badge" style="background:'+opColor+'">'+opName+'</span>':'<span style="color:#546e7a;font-size:11px;">Unassigned</span>';
+      var td5=document.createElement("td");
+      td5.innerHTML=isDone?'<span style="color:#66bb6a;font-size:11px;font-weight:bold;">✓ Done</span>':'<span style="color:#ef5350;font-size:11px;">Pending</span>';
+      var td6=document.createElement("td");
+      var sel=document.createElement("select");sel.style.cssText="background:#0a1628;color:#fff;border:1px solid #1a3a6b;border-radius:6px;padding:3px 6px;font-size:11px;margin-right:6px;";
+      sel.innerHTML='<option value="">Unassigned</option>';
+      Object.entries(OPERATORS).forEach(function(entry){
+        var uid=entry[0],op=entry[1];var opt=document.createElement("option");opt.value=uid;opt.textContent=op.name||op.email||uid;if(p.operator===uid)opt.selected=true;sel.appendChild(opt);
+      });
+      sel.addEventListener("change",function(){p.operator=sel.value;savePropertiesToFirebase();renderClientTable();});
+      var btn=document.createElement("button");btn.className="remove-btn";btn.textContent="Remove";btn.dataset.id=p.id;btn.addEventListener("click",handleRemove);
+      td6.appendChild(sel);td6.appendChild(btn);
+      tr.appendChild(td1);tr.appendChild(td2);tr.appendChild(td3);tr.appendChild(td4);tr.appendChild(td5);tr.appendChild(td6);
+      tbody.appendChild(tr);
+    });
+  });
+}
+async function handleRemove(e){
+  var id=e.currentTarget.dataset.id;var prop=PROPERTIES.find(function(p){return p.id===id;});
+  if(!prop)return;if(!confirm("Remove "+prop.name+" ("+prop.addr+") from the route?"))return;
+  PROPERTIES=PROPERTIES.filter(function(p){return p.id!==id;});
+  PROPERTIES.sort(function(a,b){return a.order-b.order;}).forEach(function(p,i){p.order=i+1;});
+  savePropertiesToFirebase();renderClientTable();
+}
+function renderRoutesTab(){
+  var q=(document.getElementById("routes-search").value||"").toLowerCase();
+  if(!_pendingAssignments){_pendingAssignments={};PROPERTIES.forEach(function(p){_pendingAssignments[p.id]=p.operator||"";});}
+  var colContainer=document.getElementById("operator-route-cols");colContainer.innerHTML="";
+  var dropUnassigned=document.getElementById("drop-unassigned");dropUnassigned.innerHTML="";
+  var filtered=q?PROPERTIES.filter(function(p){return p.name.toLowerCase().includes(q)||p.addr.toLowerCase().includes(q);}):PROPERTIES;
+  var unassigned=[];var byOp={};
+  Object.keys(OPERATORS).forEach(function(uid){byOp[uid]=[];});
+  filtered.forEach(function(p){
+    var assignedTo=_pendingAssignments[p.id]||"";
+    if(!assignedTo||!OPERATORS[assignedTo])unassigned.push(p);else byOp[assignedTo].push(p);
+  });
+  var allUnassigned=PROPERTIES.filter(function(p){return !(_pendingAssignments[p.id])||!OPERATORS[_pendingAssignments[p.id]];});
+  document.getElementById("unassigned-count").textContent=allUnassigned.length;
+  unassigned.sort(function(a,b){return a.order-b.order;}).forEach(function(p){dropUnassigned.appendChild(makeRouteItem(p,""));});
+  if(unassigned.length===0){dropUnassigned.innerHTML='<div style="color:#546e7a;font-size:12px;padding:8px;text-align:center;">All stops assigned</div>';}
+  setupDropZone(dropUnassigned,"");
+  Object.entries(OPERATORS).forEach(function(entry){
+    var uid=entry[0],op=entry[1];var color=op.color||operatorColor(uid);var props=byOp[uid]||[];
+    var col=document.createElement("div");col.className="operator-route-col";
+    var hdr=document.createElement("div");hdr.className="op-route-header";
+    hdr.innerHTML='<h3><span class="op-dot" style="background:'+color+'"></span>'+(op.name||op.email||uid)+'</h3><span class="op-count-badge">'+props.length+' stops</span>';
+    col.appendChild(hdr);
+    var sub=document.createElement("div");sub.className="op-sub";sub.textContent=op.email||"";col.appendChild(sub);
+    var zone=document.createElement("div");zone.className="route-drop-zone";zone.dataset.opUid=uid;
+    props.sort(function(a,b){return a.order-b.order;}).forEach(function(p){zone.appendChild(makeRouteItem(p,uid));});
+    if(props.length===0){zone.innerHTML='<div style="color:#546e7a;font-size:12px;padding:8px;text-align:center;">Drop stops here</div>';}
+    setupDropZone(zone,uid);col.appendChild(zone);colContainer.appendChild(col);
+  });
+  if(Object.keys(OPERATORS).length===0){colContainer.innerHTML='<div style="color:#78909c;font-size:13px;padding:12px;">No operators found. Add operators via the Firebase Console (Authentication tab), then add their UID and details to <code>route/config/operators</code> in the Realtime Database.</div>';}
+  document.getElementById("save-routes-msg").textContent="";
+}
+function makeRouteItem(p,currentOpUid){
+  var item=document.createElement("div");item.className="route-item";item.draggable=true;item.dataset.propId=p.id;
+  var left=document.createElement("div");left.className="route-item-left";
+  var num=document.createElement("div");num.className="route-item-num";num.textContent=p.order;
+  var txt=document.createElement("div");txt.innerHTML='<div class="route-item-name">'+p.name+'</div><div class="route-item-addr">'+p.addr+'</div>';
+  left.appendChild(num);left.appendChild(txt);
+  var sel=document.createElement("select");sel.className="assign-select";sel.title="Quick assign";
+  sel.innerHTML='<option value="">Unassigned</option>';
+  Object.entries(OPERATORS).forEach(function(entry){
+    var uid=entry[0],op=entry[1];var opt=document.createElement("option");opt.value=uid;opt.textContent=op.name||op.email||uid;if(currentOpUid===uid)opt.selected=true;sel.appendChild(opt);
+  });
+  sel.addEventListener("change",function(e){e.stopPropagation();_pendingAssignments[p.id]=sel.value;renderRoutesTab();});
+  item.appendChild(left);item.appendChild(sel);
+  item.addEventListener("dragstart",function(e){e.dataTransfer.setData("propId",p.id);item.style.opacity="0.5";});
+  item.addEventListener("dragend",function(){item.style.opacity="";});
+  return item;
+}
+function setupDropZone(zone,opUid){
+  zone.addEventListener("dragover",function(e){e.preventDefault();zone.classList.add("drag-over");});
+  zone.addEventListener("dragleave",function(){zone.classList.remove("drag-over");});
+  zone.addEventListener("drop",function(e){e.preventDefault();zone.classList.remove("drag-over");var propId=e.dataTransfer.getData("propId");if(propId){_pendingAssignments[propId]=opUid;renderRoutesTab();}});
+}
+async function saveRoutes(){
+  var msgEl=document.getElementById("save-routes-msg");msgEl.textContent="Saving...";msgEl.style.color="#90caf9";
+  PROPERTIES.forEach(function(p){if(_pendingAssignments.hasOwnProperty(p.id)){p.operator=_pendingAssignments[p.id]||"";}});
+  savePropertiesToFirebase();populateOperatorSelects();
+  msgEl.textContent="✓ Routes saved and pushed to all operators!";msgEl.style.color="#66bb6a";
+  _pendingAssignments=null;
+  setTimeout(function(){renderRoutesTab();},300);
+}
+</script>
+</body>
+</html>
